@@ -9,12 +9,17 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Stack;
+
 public class GameView extends View {
     private Cell[][] cells;
     private static final int COLS = 7, ROWS = 10;
     private static final float WALL_THICKNESS = 4;
     private float cellSize, hMargin, vMargin;
     private Paint wallPaint;
+    private Random random;
 
     public GameView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -23,10 +28,74 @@ public class GameView extends View {
         wallPaint.setColor(Color.BLACK);
         wallPaint.setStrokeWidth(WALL_THICKNESS);
 
+        random = new Random();
+
         createMaze();
     }
 
+    private Cell getNeightbour(Cell cell){
+        ArrayList<Cell> neighbours = new ArrayList<>();
+
+        //left neighbour
+        if(cell.col > 0){
+            if(!cells[cell.col-1][cell.row].visited){
+                neighbours.add(cells[cell.col-1][cell.row]);
+            }
+        }
+
+        //right neighbour
+        if(cell.col < COLS-1){
+            if(!cells[cell.col+1][cell.row].visited){
+                neighbours.add(cells[cell.col+1][cell.row]);
+            }
+        }
+
+        //top neighbour
+        if(cell.row > 0){
+            if(!cells[cell.col][cell.row-1].visited){
+                neighbours.add(cells[cell.col][cell.row-1]);
+            }
+        }
+
+        //bottom neighbour
+        if(cell.row < ROWS-1){
+            if(!cells[cell.col][cell.row+1].visited){
+                neighbours.add(cells[cell.col][cell.row+1]);
+            }
+        }
+
+        if(neighbours.size() > 0){
+            // index 0,1,2
+            int index = random.nextInt(neighbours.size());
+            return neighbours.get(index);
+        }
+        return null;
+    }
+
+    private void removeWall(Cell current, Cell next){
+        if(current.col == next.col && current.row == next.row+1){
+            current.topWall = false;
+            next.bottomWall = false;
+        }
+        if(current.col == next.col && current.row == next.row-1){
+            current.bottomWall = false;
+            next.topWall = false;
+        }
+        if(current.col == next.col+1 && current.row == next.row){
+            current.leftWall = false;
+            next.rightWall = false;
+        }
+        if(current.col == next.col-1 && current.row == next.row){
+            current.rightWall = false;
+            next.leftWall = false;
+        }
+    }
+
     private void createMaze(){
+        // Recursive Stack Tracker
+        Stack<Cell> stack = new Stack<>();
+        Cell current, next;
+
         cells = new Cell[COLS][ROWS];
 
         for(int x=0; x < COLS; x++){
@@ -34,6 +103,22 @@ public class GameView extends View {
                 cells[x][y] = new Cell(x, y);
             }
         }
+
+        // Default cells
+        current = cells[0][0];
+        current.visited = true;
+
+        do {
+            next = getNeightbour(current);
+            if (next != null) {
+                removeWall(current, next);
+                stack.push(current);
+                current = next;
+                current.visited = true;
+            } else {
+                current = stack.pop();
+            }
+        }while(!stack.empty());
     }
 
     @Override
@@ -94,7 +179,8 @@ public class GameView extends View {
         boolean topWall = true,
             leftWall = true,
             bottomWall = true,
-            rightWall = true;
+            rightWall = true,
+            visited = false;
 
         int col, row;
 
